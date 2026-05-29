@@ -229,6 +229,7 @@
       <span id="tokenLabel">Ligar ao To Do</span>
     </button>
     <button class="btn-list" onclick="openShoppingList()">📋 Lista de compras</button>
+    <button class="btn-list" onclick="sendOrderToAutomation()">⚙️ Encomenda n8n</button>
     <button class="btn-add-item" onclick="openAddModal()">+ Novo item</button>
   </div>
 </header>
@@ -336,6 +337,8 @@
 // ══════════════════════════════════════════
 // DATA
 // ══════════════════════════════════════════
+const N8N_WEBHOOK_URL = '';
+
 const CATEGORIES = [
   { id:'todos',      label:'Todos',       emoji:'' },
   { id:'frutas',     label:'Frutas',      emoji:'🍎' },
@@ -703,6 +706,46 @@ function saveItem() {
     showToast('✓ "' + name + '" adicionado');
   }
   save(); render(); closeModal('addModal');
+}
+
+// ══════════════════════════════════════════
+// ORDER JSON FOR n8n (experimental)
+// ══════════════════════════════════════════
+function buildOrderPayload() {
+  return {
+    loja: 'pingo-doce',
+    origem: 'lista-compras-app',
+    timestamp: new Date().toISOString(),
+    itens: items.map(i => ({
+      id: i.id,
+      nome: i.name,
+      categoria: i.cat,
+      emoji: i.emoji || '',
+      quantidade: 1
+    }))
+  };
+}
+
+async function sendOrderToAutomation() {
+  const payload = buildOrderPayload();
+  console.log('JSON de encomenda para n8n', payload);
+
+  if (!N8N_WEBHOOK_URL) {
+    showToast('JSON de encomenda gerado (ver consola). Define N8N_WEBHOOK_URL no código.', true);
+    return;
+  }
+
+  try {
+    const res = await fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('✓ Encomenda enviada para n8n (experimental)');
+  } catch (e) {
+    showToast('Erro a enviar para n8n: ' + e.message, true);
+  }
 }
 
 // ══════════════════════════════════════════
